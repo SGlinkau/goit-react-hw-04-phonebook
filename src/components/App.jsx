@@ -1,88 +1,70 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 
-import { PhoneBook } from './phoneBook/PhoneBook';
+import PhoneBook from './phoneBook/PhoneBook';
 import { ContactsList } from './contactsList/ContactsList';
 import { nanoid } from 'nanoid';
 import { SearchFilter } from './searchFilter/SearchFilter';
 import { Section } from './section/Section';
 import styles from './App.module.css';
 
-export const INITIAL_STATE = {
-  contacts: [],
-  filter: '',
-};
+const LOCALSTORAGE_KEY = 'LOCALSTORAGE_KEY';
 
-export class App extends Component {
-  componentDidMount = () => {
-    let loadValues = JSON.parse(localStorage.getItem('LOCALSTORAGE_KEY'));
-    if (loadValues === null) {
-      this.setState({
-        contacts: [],
-      });
-    } else {
-      this.setState({
-        contacts: loadValues,
-      });
+const App = () => {
+  const [contacts, setContacts] = useState([]);
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    const savedContacts = localStorage.getItem(LOCALSTORAGE_KEY);
+
+    if (savedContacts) {
+      setContacts(JSON.parse(savedContacts));
     }
-  };
+  }, []);
 
-  componentDidUpdate = () => {
+  useEffect(() => {
     try {
-      const initialState = JSON.stringify(this.state.contacts);
-      localStorage.setItem('LOCALSTORAGE_KEY', initialState);
+      const initialState = JSON.stringify(contacts);
+      localStorage.setItem(LOCALSTORAGE_KEY, initialState);
     } catch (error) {
       console.error('Set state error: ', error.message);
     }
-  };
+  }, [contacts]);
 
-  state = {
-    ...INITIAL_STATE,
-  };
-
-  addNewContact = ({ name, number }) => {
-    const { contacts } = this.state;
-
+  const addNewContact = ({ name, number }) => {
     if (contacts.find(cont => cont.name === name)) {
       alert(`${name} is already in contacts`);
     } else {
-      this.setState({
-        contacts: [...contacts, { name, number, id: nanoid() }],
-      });
+      const newContacts = [...contacts, { name, number, id: nanoid() }];
+      setContacts(newContacts);
     }
   };
 
-  searchByName = e => {
-    this.setState({ filter: e.target.value.toLowerCase() });
+  const searchByName = e => {
+    setFilter(e.target.value.toLowerCase());
   };
 
-  viewContacts = () => {
-    const { contacts, filter } = this.state;
-
+  const viewContacts = () => {
     return contacts.filter(cont => cont.name.toLowerCase().includes(filter));
   };
 
-  deleteContact = id => {
-    this.setState(({ contacts }) => ({
-      contacts: contacts.filter(cont => cont.id !== id),
-    }));
+  const deleteContact = id => {
+    const updatedContacts = contacts.filter(cont => cont.id !== id);
+    setContacts(updatedContacts);
   };
 
-  render() {
-    const { wrapper } = styles;
-    return (
-      <div className={wrapper}>
-        <Section title="Phonebook">
-          <PhoneBook newContact={this.addNewContact} />
-        </Section>
+  const { wrapper } = styles;
+  return (
+    <div className={wrapper}>
+      <Section title="Phonebook">
+        <PhoneBook newContact={addNewContact} />
+      </Section>
 
-        <Section title="Contacts">
-          <SearchFilter searchByName={this.searchByName} />
-          <ContactsList
-            contacts={this.viewContacts()}
-            deleteItem={this.deleteContact}
-          />
-        </Section>
-      </div>
-    );
-  }
-}
+      <Section title="Contacts">
+        <SearchFilter searchByName={searchByName} />
+        <ContactsList contacts={viewContacts()} deleteItem={deleteContact} />
+      </Section>
+    </div>
+  );
+};
+
+export default App;
